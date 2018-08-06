@@ -12,7 +12,7 @@ Break the limits of your application!\
 ## Description
 This library is a PHP wrapper of the FileMaker Data API.<br/>
 You will be able to use every functions like it's documented in your FileMaker server Data Api documentation (accessible via https://[your server domain]/fmi/data/apidoc).
-General FileMaker document on the Data API is available [here](https://fmhelp.filemaker.com/docs/16/en/restapi/)
+General FileMaker document on the Data API is available [here](https://fmhelp.filemaker.com/docs/17/en/dataapi/)
 
 ## Requirements
 
