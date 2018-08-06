@@ -1,4 +1,4 @@
-Lesterius FileMaker 17 Data API wrapper
+Lesterius FileMaker 17 Data API wrapper - myFMApiLibrary for PHP
 =======================
 
 # Presentation
