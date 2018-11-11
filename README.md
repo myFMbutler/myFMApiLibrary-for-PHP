@@ -222,7 +222,7 @@ $containerFieldRepetition = 1;
 $filepath                 = '/usr/home/acme/pictures/photo.jpg';
 
 try {
-  $dataApi->setGlobalFields('layout name', $recordId, $containerFieldName, $containerFieldRepetition, $filepath);
+  $dataApi->uploadToContainer('layout name', $recordId, $containerFieldName, $containerFieldRepetition, $filepath);
 } catch(\Exception $e) {
   // handle exception
 }
