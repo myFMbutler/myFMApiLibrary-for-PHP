@@ -19,8 +19,7 @@
     },
     "require": {
         "php" : ">=5.5.0",
-        "ext-curl": "*",
-        "guzzlehttp/psr7": "^1.4"
+        "ext-curl": "*"
     },
     "require-dev": {
         "phpunit/phpunit": "^5.6"
