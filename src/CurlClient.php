@@ -44,7 +44,7 @@ final class CurlClient
         }
 
         $headers = [];
-        $completeUrl = $this->buildUri($url, $this->baseUrl);
+        $completeUrl = curl_escape($ch, $this->baseUrl.$url);
 
         if (!$this->sslVerify) {
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
@@ -117,20 +117,7 @@ final class CurlClient
 
         return $response;
     }
-
-    /**
-     * @param      $uri
-     * @param null $baseUri
-     *
-     * @return string
-     */
-    private function buildUri($uri, $baseUri = null)
-    {
-        $uri = \GuzzleHttp\Psr7\uri_for($uri === null ? '' : $uri);
-
-        return $baseUri.$uri->getPath();
-    }
-
+    
     /**
      * @param Response $response
      *
