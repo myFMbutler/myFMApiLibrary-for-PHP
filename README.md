@@ -24,7 +24,7 @@ General FileMaker document on the Data API is available [here](https://fmhelp.fi
 The recommended way to install it is through [Composer](http://getcomposer.org).
 
 ```bash
-composer require myFMbutler/myFMApiLibrary-for-PHP
+composer require "myFMbutler/myFMApiLibrary-for-PHP:*"
 ```
 
 After installing, you need to require Composer's autoloader:
