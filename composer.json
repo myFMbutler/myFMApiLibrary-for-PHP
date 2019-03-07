@@ -5,6 +5,7 @@
     "Keywords": ["Lesterius", "FileMaker", "API", "REST", "Database", "Wrapper"],
     "licence": "GPL-3.0",
     "version": "1.0.0",
+    "minimum-stability": "stable",
     "authors": [
       {
         "name": "Lesterius",
