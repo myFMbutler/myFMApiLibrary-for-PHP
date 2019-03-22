@@ -47,13 +47,13 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 Login with credentials:
 ```php
-$dataApi = new \Lesterius\FileMakerApi\DataApi('https://test.fmconnection.com/fmi/data', 'MyDatabase');
+$dataApi = new \myfmbutler\myfmapilibrary-for-php\DataApi('https://test.fmconnection.com/fmi/data', 'MyDatabase');
 $dataApi->login('filemaker api user', 'filemaker api password', 'layout name');
 ```
 
 Login with oauth:
 ```php
-$dataApi = new \Lesterius\FileMakerApi\DataApi('https://test.fmconnection.com/fmi/data', 'MyDatabase');
+$dataApi = new \myfmbutler\myfmapilibrary-for-php\DataApi('https://test.fmconnection.com/fmi/data', 'MyDatabase');
 $dataApi->loginOauth('oAuthRequestId', 'oAuthIdentifier', 'layout name');
 ```
 
@@ -81,12 +81,12 @@ $scripts = [
     [
         'name'  => 'ValidateUser',
         'param' => 'johndoe@acme.inc',
-        'type'  => Lesterius\FileMakerApi\DataApi::SCRIPT_PREREQUEST
+        'type'  => myfmbutler\myfmapilibrary-for-php\DataApi::SCRIPT_PREREQUEST
     ],
     [
         'name'  => 'SendEmail',
         'param' => 'johndoe@acme.inc',
-        'type'  => Lesterius\FileMakerApi\DataApi::SCRIPT_POSTREQUEST
+        'type'  => myfmbutler\myfmapilibrary-for-php\DataApi::SCRIPT_POSTREQUEST
     ]
 ];
 
