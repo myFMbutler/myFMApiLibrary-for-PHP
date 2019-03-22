@@ -4,7 +4,7 @@
     "description": "FileMaker 17 API PHP wrapper",
     "Keywords": ["Lesterius", "FileMaker", "API", "REST", "Database", "Wrapper"],
     "licence": "gpl-3.0",
-    "version": "1.0.2",
+    "version": "1.0.1",
     "minimum-stability": "stable",
     "authors": [
       {
