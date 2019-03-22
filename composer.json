@@ -1,5 +1,5 @@
 {
-    "name": "myFMbutler/myFMApiLibrary-for-PHP",
+    "name": "myFMbutler/myfmapilibrary-for-php",
     "type": "library",
     "description": "FileMaker 17 API PHP wrapper",
     "Keywords": ["Lesterius", "FileMaker", "API", "REST", "Database", "Wrapper"],
