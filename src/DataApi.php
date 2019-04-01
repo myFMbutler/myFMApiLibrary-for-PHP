@@ -511,11 +511,11 @@ final class DataApi implements DataApiInterface
             $portalList[] = $portal['name'];
 
             if (isset($portal['offset'])) {
-                $options['_offset.'.$portal['name']] = intval($portal['offset']);
+                $options['offset.'.$portal['name']] = intval($portal['offset']);
             }
 
             if (isset($portal['limit'])) {
-                $options['_limit.'.$portal['name']] = intval($portal['limit']);
+                $options['limit.'.$portal['name']] = intval($portal['limit']);
             }
         }
 
