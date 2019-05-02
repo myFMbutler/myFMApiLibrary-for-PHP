@@ -34,7 +34,7 @@ final class DataApi implements DataApiInterface
      */
     public function __construct($apiUrl, $apiDatabase, $apiUser = null, $apiPassword = null, $sslVerify = true)
     {
-        $this->apiDatabase   = $apiDatabase;
+        $this->apiDatabase   = rawurlencode(trim($apiDatabase));
         $this->ClientRequest = new CurlClient($apiUrl, $sslVerify);
 
         if (!empty($apiUser)) {
