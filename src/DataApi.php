@@ -481,14 +481,31 @@ final class DataApi implements DataApiInterface
     {
         $preparedScript = [];
         foreach ($scripts as $script) {
-            if (!in_array($script['type'], [self::SCRIPT_POSTREQUEST, self::SCRIPT_PREREQUEST, self::SCRIPT_PRESORT])) {
-                continue;
+            /**
+                * The following works around a quirk of the Data API. If you send a script parameter, but it's blank (unused), it chokes. So delete it.
+                * prerequest and presort behavior is untested (with respect to this specific issue).
+            **/
+            switch ($script['type']) {
+                case self::SCRIPT_PREREQUEST:
+                case self::SCRIPT_PRESORT:
+                    $scriptSuffix = $script['type'];
+                    $preparedScript['script'.$scriptSuffix]          = $script['name'];
+                    $preparedScript['script'.$scriptSuffix.'.param'] = $script['param'];
+                    break;
+                case self::SCRIPT_POSTREQUEST:
+                    $preparedScript['script'] = $script['name'];
+                    if ($script['param'] === '') {
+                        unset($script['param']);
+                    } elseif ($script['param'] === null) {
+                        unset($script['param']);
+                    } else {
+                        $preparedScript['script.param'] = $script['param'];
+                    }
+                    break;
+                default:
+                    continue;
             }
-
-            $scriptSuffix = !($script['type'] === self::SCRIPT_POSTREQUEST) ? '.'.$script['type'] : '';
-
-            $preparedScript['script'.$scriptSuffix]          = $script['name'];
-            $preparedScript['script'.$scriptSuffix.'.param'] = $script['param'];
+            
         }
 
         return $preparedScript;
