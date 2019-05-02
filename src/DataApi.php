@@ -494,12 +494,14 @@ final class DataApi implements DataApiInterface
                     break;
                 case self::SCRIPT_POSTREQUEST:
                     $preparedScript['script'] = $script['name'];
-                    if ($script['param'] === '') {
-                        unset($script['param']);
-                    } elseif ($script['param'] === null) {
-                        unset($script['param']);
-                    } else {
-                        $preparedScript['script.param'] = $script['param'];
+                    if (array_key_exists('param', $script)) {
+                        if ($script['param'] === '') {
+                            unset($script['param']);
+                        } elseif ($script['param'] === null) {
+                            unset($script['param']);
+                        } else {
+                            $preparedScript['script.param'] = $script['param'];
+                        }
                     }
                     break;
                 default:
