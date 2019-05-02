@@ -34,7 +34,7 @@ final class DataApi implements DataApiInterface
      */
     public function __construct($apiUrl, $apiDatabase, $apiUser = null, $apiPassword = null, $sslVerify = true)
     {
-        $this->apiDatabase   = $apiDatabase;
+        $this->apiDatabase   = $this->prepareURLpart($apiDatabase);
         $this->ClientRequest = new CurlClient($apiUrl, $sslVerify);
 
         if (!empty($apiUser)) {
@@ -107,6 +107,7 @@ final class DataApi implements DataApiInterface
      */
     public function createRecord($layout, array $data, array $scripts = [], array $portalData = [])
     {
+        $layout = $this->prepareURLpart($layout);
         $jsonOptions = [
             'fieldData' => json_encode(array_map('\strval', $data))
         ];
@@ -143,6 +144,7 @@ final class DataApi implements DataApiInterface
      */
     public function editRecord($layout, $recordId, array $data, $lastModificationId = null, array $portalData = [], array $scripts = [])
     {
+        $layout = $this->prepareURLpart($layout);
         $jsonOptions = [
             'fieldData' => json_encode(array_map('\strval', $data)),
         ];
@@ -177,12 +179,9 @@ final class DataApi implements DataApiInterface
      * @return mixed
      * @throws Exception
      */
-    public function getRecord(
-        $layout,
-        $recordId,
-        array $portalOptions = [],
-        array $scripts = []
-    ) {
+    public function getRecord($layout, $recordId, array $portalOptions = [], array $scripts = [])
+    {
+        $layout = $this->prepareURLpart($layout);
         $queryParams = [];
         if (!empty($portalOptions)) {
             $queryParams['portal'] = $portalOptions['name'];
@@ -223,14 +222,9 @@ final class DataApi implements DataApiInterface
      * @return mixed
      * @throws Exception
      */
-    public function getRecords(
-        $layout,
-        $sort = null,
-        $offset = null,
-        $limit = null,
-        array $portals = [],
-        array $scripts = []
-    ) {
+    public function getRecords($layout, $sort = null, $offset = null, $limit = null, array $portals = [], array $scripts = [])
+    {
+        $layout = $this->prepareURLpart($layout);
         $jsonOptions = [];
 
         if (!is_null($offset)) {
@@ -276,6 +270,8 @@ final class DataApi implements DataApiInterface
      */
     public function uploadToContainer($layout, $recordId, $containerFieldName, $containerFieldRepetition, $filepath)
     {
+        $layout = $this->prepareURLpart($layout);
+        $containerFieldName = $this->prepareURLpart($containerFieldName);
         $this->ClientRequest->request(
             'POST',
             "/v1/databases/$this->apiDatabase/layouts/$layout/records/$recordId/containers/$containerFieldName/$containerFieldRepetition",
@@ -309,16 +305,9 @@ final class DataApi implements DataApiInterface
      * @return mixed
      * @throws Exception
      */
-    public function findRecords(
-        $layout,
-        $query,
-        $sort = null,
-        $offset = null,
-        $limit = null,
-        array $portals = [],
-        array $scripts = [],
-        $responseLayout = null
-    ) {
+    public function findRecords($layout, $query, $sort = null, $offset = null, $limit = null, array $portals = [], array $scripts = [], $responseLayout = null)
+    {
+        $layout = $this->prepareURLpart($layout);
         if (!is_array($query)) {
             $preparedQuery = [$query];
         } else {
@@ -392,6 +381,7 @@ final class DataApi implements DataApiInterface
      */
     public function setGlobalFields($layout, array $globalFields)
     {
+        $layout = $this->prepareURLpart($layout);
         $response = $this->ClientRequest->request(
             'PATCH',
             "/v1/databases/$this->apiDatabase/globals",
@@ -417,6 +407,7 @@ final class DataApi implements DataApiInterface
      */
     public function deleteRecord($layout, $recordId, $scripts = [])
     {
+        $layout = $this->prepareURLpart($layout);
         $this->ClientRequest->request(
             'DELETE',
             "/v1/databases/$this->apiDatabase/layouts/$layout/records/$recordId",
@@ -472,6 +463,16 @@ final class DataApi implements DataApiInterface
         }
     }
 
+    /**
+     * @param string $data
+     * 
+     * @return string
+     */
+    protected function prepareURLpart($data) 
+    {
+        return rawurlencode($data);
+    }
+    
     /**
      * @param array $scripts
      *
