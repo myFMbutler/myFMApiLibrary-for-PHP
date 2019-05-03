@@ -74,10 +74,11 @@ interface DataApiInterface
      * @param $containerFieldName
      * @param $containerFieldRepetition
      * @param $filepath
+     * @param $filename
      *
      * @return mixed
      */
-    public function uploadToContainer($layout, $recordId, $containerFieldName, $containerFieldRepetition, $filepath);
+    public function uploadToContainer($layout, $recordId, $containerFieldName, $containerFieldRepetition, $filepath, $filename);
 
     /**
      * @param        $layout
