@@ -269,12 +269,13 @@ final class DataApi implements DataApiInterface
      * @param $containerFieldName
      * @param $containerFieldRepetition
      * @param $filepath
+     * @param $filename
      *
      * @return true
      *
      * @throws Exception
      */
-    public function uploadToContainer($layout, $recordId, $containerFieldName, $containerFieldRepetition, $filepath)
+    public function uploadToContainer($layout, $recordId, $containerFieldName, $containerFieldRepetition, $filepath, $filename)
     {
         $this->ClientRequest->request(
             'POST',
@@ -285,7 +286,7 @@ final class DataApi implements DataApiInterface
                     ['Content-Type' => 'multipart/form-data']
                 ),
                 'file'    => [
-                    'name' => pathinfo($filepath, PATHINFO_FILENAME).'.'.pathinfo($filepath, PATHINFO_EXTENSION),
+                    'name' => $filename,
                     'path' => $filepath
                 ]
             ]
