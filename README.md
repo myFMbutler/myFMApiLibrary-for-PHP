@@ -219,10 +219,12 @@ try {
 
 $containerFieldName       = 'Picture';
 $containerFieldRepetition = 1;
-$filepath                 = '/usr/home/acme/pictures/photo.jpg';
+// replace 'upload' below with the name="value" of the file input element of your web form
+$filepath                 = $_FILES['upload']['tmp_name'];
+$filename                 = $_FILES['upload']['name'];
 
 try {
-  $dataApi->uploadToContainer('layout name', $recordId, $containerFieldName, $containerFieldRepetition, $filepath);
+  $dataApi->uploadToContainer('layout name', $recordId, $containerFieldName, $containerFieldRepetition, $filepath, $filename);
 } catch(\Exception $e) {
   // handle exception
 }
