@@ -269,14 +269,18 @@ final class DataApi implements DataApiInterface
      * @param $containerFieldName
      * @param $containerFieldRepetition
      * @param $filepath
-     * @param $filename
+     * @param null $filename
      *
      * @return true
      *
      * @throws Exception
      */
-    public function uploadToContainer($layout, $recordId, $containerFieldName, $containerFieldRepetition, $filepath, $filename)
+    public function uploadToContainer($layout, $recordId, $containerFieldName, $containerFieldRepetition, $filepath, $filename = null)
     {
+        if (empty($filename)) {
+            $filename = pathinfo($filepath, PATHINFO_FILENAME).'.'.pathinfo($filepath, PATHINFO_EXTENSION);
+        }
+        
         $this->ClientRequest->request(
             'POST',
             "/v1/databases/$this->apiDatabase/layouts/$layout/records/$recordId/containers/$containerFieldName/$containerFieldRepetition",
