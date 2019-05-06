@@ -213,7 +213,7 @@ try {
 ```
 
 ### Upload file to container
-
+#### Without checking filename
 ```php
 // Call login method first
 
@@ -225,6 +225,21 @@ $filename                 = $_FILES['upload']['name'];
 
 try {
   $dataApi->uploadToContainer('layout name', $recordId, $containerFieldName, $containerFieldRepetition, $filepath, $filename);
+} catch(\Exception $e) {
+  // handle exception
+}
+```
+
+#### Renaming file
+```php
+// Call login method first
+
+$containerFieldName       = 'Picture';
+$containerFieldRepetition = 1;
+$filepath                 = '/usr/home/acme/pictures/photo.jpg';
+
+try {
+  $dataApi->uploadToContainer('layout name', $recordId, $containerFieldName, $containerFieldRepetition, $filepath);
 } catch(\Exception $e) {
   // handle exception
 }
