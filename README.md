@@ -213,7 +213,8 @@ try {
 ```
 
 ### Upload file to container
-#### Without checking filename
+
+#### Renaming file
 ```php
 // Call login method first
 
@@ -230,7 +231,7 @@ try {
 }
 ```
 
-#### Renaming file
+#### Without checking filename
 ```php
 // Call login method first
 
