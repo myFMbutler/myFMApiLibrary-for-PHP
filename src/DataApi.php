@@ -495,9 +495,7 @@ final class DataApi implements DataApiInterface
                 case self::SCRIPT_POSTREQUEST:
                     $preparedScript['script'] = $script['name'];
                     if (array_key_exists('param', $script)) {
-                        if ($script['param'] === '') {
-                            unset($script['param']);
-                        } elseif ($script['param'] === null) {
+                        if (empty($script['param'])) {
                             unset($script['param']);
                         } else {
                             $preparedScript['script.param'] = $script['param'];
