@@ -44,7 +44,7 @@ final class CurlClient
         }
 
         $headers = [];
-        $completeUrl = $this->baseUrl . curl_escape($ch, $url);
+        $completeUrl = $this->baseUrl . $url;
 
         if (!$this->sslVerify) {
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
