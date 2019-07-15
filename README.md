@@ -19,7 +19,7 @@ General FileMaker document on the Data API is available [here](https://fmhelp.fi
 
 ## Requirements
 
-- PHP >= 5.5
+- PHP 7.1 or higher
 - PHP cURL extension
 - PHP mb_string extension
 
