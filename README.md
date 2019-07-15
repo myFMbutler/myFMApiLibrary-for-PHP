@@ -1,4 +1,4 @@
-Lesterius FileMaker 17 Data API wrapper - myFMApiLibrary for PHP
+Lesterius FileMaker 18 Data API wrapper - myFMApiLibrary for PHP
 =======================
 
 # Presentation
@@ -10,14 +10,18 @@ Break the limits of your application!\
 ![Lesterius logo](http://i1.createsend1.com/ei/r/29/D33/DFF/183501/csfinal/Mailing_Lesterius-logo.png "Lesterius")
 
 ## Description
-This library is a PHP wrapper of the FileMaker Data API.<br/>
+This library is a PHP wrapper of the FileMaker Data API 18.<br/>
+
+You can find the PHP wrapper of the FileMaker Data API 17 on the releases <= v.1.* .<br/>
+
 You will be able to use every functions like it's documented in your FileMaker server Data Api documentation (accessible via https://[your server domain]/fmi/data/apidoc).
-General FileMaker document on the Data API is available [here](https://fmhelp.filemaker.com/docs/17/en/dataapi/)
+General FileMaker document on the Data API is available [here](https://fmhelp.filemaker.com/docs/18/en/dataapi/)
 
 ## Requirements
 
 - PHP >= 5.5
 - PHP cURL extension
+- PHP mb_string extension
 
 ## Installation
 
@@ -47,20 +51,17 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 Login with credentials:
 ```php
-$dataApi = new \Lesterius\FileMakerApi\DataApi('https://test.fmconnection.com/fmi/data', 'MyDatabase');
-$dataApi->login('filemaker api user', 'filemaker api password');
+$dataApi = new \Lesterius\FileMakerApi\DataApi('https://test.fmconnection.com/fmi/data', 'MyDatabase', 'filemaker api user', 'filemaker api password');
 ```
 
 Login with oauth:
 ```php
-$dataApi = new \Lesterius\FileMakerApi\DataApi('https://test.fmconnection.com/fmi/data', 'MyDatabase');
-$dataApi->loginOauth('oAuthRequestId', 'oAuthIdentifier');
+$dataApi = new \Lesterius\FileMakerApi\DataApi('https://test.fmconnection.com/fmi/data', 'MyDatabase', null, null, true, 'oAuthRequestId', 'oAuthIdentifier');
 ```
 
 ### Logout
 
 ```php
-// Call login method first
 
 $dataApi->logout();
 ```
@@ -68,7 +69,6 @@ $dataApi->logout();
 ### Create record
 
 ```php
-// Call login method first
 
 $data = [
     'FirstName'         => 'John',
@@ -91,8 +91,12 @@ $scripts = [
 ];
 
 $portalData = [
-    'lunchDate' => '17/04/2013',
-    'lunchPlace' => 'Acme Inc.'
+  'portalName or OccurenceName' => [
+      [
+          "Occurence::PortalField 1" => "Value",
+          "Occurence::PortalField 2" => "Value",
+      ]
+  ]
 ];
 
 try {
@@ -105,7 +109,6 @@ try {
 ### Delete record
 
 ```php
-// Call login method first
 
 try {
   $dataApi->deleteRecord('layout name', $recordId, $script);
@@ -117,10 +120,20 @@ try {
 ### Edit record
 
 ```php
-// Call login method first
 
 try {
-  $recordId = $dataApi->editRecord('layout name', $recordId, $data, $lastModificationId, $$portalData, $scripts);
+  $recordId = $dataApi->editRecord('layout name', $recordId, $data, $lastModificationId, $portalData, $scripts);
+} catch(\Exception $e) {
+  // handle exception
+}
+```
+
+### Duplicate record
+
+```php
+
+try {
+  $recordId = $dataApi->editRecord('layout name', $recordId, $scripts);
 } catch(\Exception $e) {
   // handle exception
 }
@@ -129,15 +142,14 @@ try {
 ### Get record
 
 ```php
-// Call login method first
 
 $portals = [
     [
-        'portal' => 'Portal1',
-        'limit'  => 10
+        'name'  => 'Portal1',
+        'limit' => 10
     ],
     [ 
-        'portal' => 'Portal2',
+        'name'   => 'Portal2',
         'offset' => 3
     ]
 ];
@@ -152,7 +164,6 @@ try {
 ### Get records
 
 ```php
-// Call login method first
 
 $sort = [
     [
@@ -175,7 +186,7 @@ try {
 ### Find records
 
 ```php
-// Call login method first
+
 $query = [
     [
         'fields'  => [
@@ -198,7 +209,6 @@ try {
 ### Set global fields
 
 ```php
-// Call login method first
 
 $data = [
   'FieldName1'	=> 'value',
@@ -212,11 +222,22 @@ try {
 }
 ```
 
+### Execute script
+
+```php
+
+
+try {
+  $dataApi->executeScript('script name', $scriptsParams);
+} catch(\Exception $e) {
+  // handle exception
+}
+```
+
 ### Upload file to container
 
 #### Renaming file
 ```php
-// Call login method first
 
 $containerFieldName       = 'Picture';
 $containerFieldRepetition = 1;
@@ -233,7 +254,6 @@ try {
 
 #### Without checking filename
 ```php
-// Call login method first
 
 $containerFieldName       = 'Picture';
 $containerFieldRepetition = 1;
@@ -241,6 +261,58 @@ $filepath                 = '/usr/home/acme/pictures/photo.jpg';
 
 try {
   $dataApi->uploadToContainer('layout name', $recordId, $containerFieldName, $containerFieldRepetition, $filepath);
+} catch(\Exception $e) {
+  // handle exception
+}
+```
+
+### Metadata Info
+
+#### Product Info
+```php
+
+try {
+  $dataApi->getProductInfo();
+} catch(\Exception $e) {
+  // handle exception
+}
+```
+
+#### Database Names
+```php
+
+try {
+  $dataApi->getDatabaseNames();
+} catch(\Exception $e) {
+  // handle exception
+}
+```
+
+#### Layout Names
+```php
+
+try {
+  $dataApi->getLayoutNames();
+} catch(\Exception $e) {
+  // handle exception
+}
+```
+
+#### Script Names
+```php
+
+try {
+  $dataApi->getScriptNames();
+} catch(\Exception $e) {
+  // handle exception
+}
+```
+
+#### Layout Metadata
+```php
+
+try {
+  $dataApi->getLayoutMetadata('layout name', $recordId);
 } catch(\Exception $e) {
   // handle exception
 }

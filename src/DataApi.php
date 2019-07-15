@@ -21,46 +21,62 @@ final class DataApi implements DataApiInterface
     protected $apiToken       = null;
     protected $convertToAssoc = true;
 
+    private   $apiUsername          = null;
+    private   $apiPassword          = null;
+    private   $oAuthRequestId       = null;
+    private   $oAuthIdentifier      = null;
+
     /**
      * DataApi constructor
      *
      * @param      $apiUrl
      * @param      $apiDatabase
-     * @param bool $sslVerify
-     * @param      $apiUser
+     * @param      $apiUsername
      * @param      $apiPassword
      *
+     * @param bool $sslVerify
+     * @param null $oAuthRequestId
+     * @param null $oAuthIdentifier
      * @throws Exception
      */
-    public function __construct($apiUrl, $apiDatabase, $apiUser = null, $apiPassword = null, $sslVerify = true)
+    public function __construct($apiUrl, $apiDatabase, $apiUsername = null, $apiPassword = null, $sslVerify = true, $oAuthRequestId = null, $oAuthIdentifier = null)
     {
-        $this->apiDatabase   = $apiDatabase;
-        $this->ClientRequest = new CurlClient($apiUrl, $sslVerify);
+        $this->apiDatabase      = $apiDatabase;
+        $this->ClientRequest    = new CurlClient($apiUrl, $sslVerify);
+        $this->apiUsername      = $apiUsername;
+        $this->apiPassword      = $apiPassword;
+        $this->oAuthRequestId   = $oAuthRequestId;
+        $this->oAuthIdentifier  = $oAuthIdentifier;
 
-        if (!empty($apiUser)) {
-            $this->login($apiUser, $apiPassword);
+        if ((empty($apiUsername) && empty($apiPassword)) || (empty($oAuthRequestId) && empty($oAuthIdentifier))) {
+            new \Exception("Data Api needs valid credentials [username;password] or [authRequestId;authIdentifier]");
         }
+
+        // Basic default Authentication
+        $this->login();
     }
+
+    // -- Start auth Part --
 
     /**
      * Login to FileMaker API
      *
-     * @param $apiUsername
-     * @param $apiPassword
+     *
      *
      * @return $this
      * @throws Exception
      */
-    public function login($apiUsername, $apiPassword)
+    public function login()
     {
+        $headers = $this->getHeaderAuth();
+
+        // Send curl request
         $response = $this->ClientRequest->request(
             'POST',
             "/v1/databases/$this->apiDatabase/sessions",
             [
-                'headers' => [
-                    'Authorization' => 'Basic '.base64_encode("$apiUsername:$apiPassword"),
-                ],
-                'json'    => [],
+                'headers' => $headers,
+                'json'    => []
             ]
         );
 
@@ -70,33 +86,31 @@ final class DataApi implements DataApiInterface
     }
 
     /**
-     * @param $oAuthRequestId
-     * @param $oAuthIdentifier
+     *  Close the connection with FileMaker Server API
      *
-     * @return $this
      * @throws Exception
      */
-    public function loginOauth($oAuthRequestId, $oAuthIdentifier)
+    public function logout()
     {
-        $response = $this->ClientRequest->request(
-            'POST',
-            "/v1/databases/$this->apiDatabase/sessions",
-            [
-                'header' => [
-                    'X-FM-Data-Login-Type'       => 'oauth',
-                    'X-FM-Data-OAuth-Request-Id' => $oAuthRequestId,
-                    'X-FM-Data-OAuth-Identifier' => $oAuthIdentifier,
-                ],
-                'json'   => [],
-            ]
+        // Send curl request
+        $this->ClientRequest->request(
+            'DELETE',
+            "/v1/databases/$this->apiDatabase/sessions/$this->apiToken",
+            []
         );
 
-        $this->apiToken = $response->getHeader('X-FM-Data-Access-Token');
+        $this->apiToken = null;
 
         return $this;
     }
 
+    // -- End auth Part --
+
+    // -- Start records Part --
+
     /**
+     * Create a new record
+     *
      * @param       $layout
      * @param array $data
      * @param array $scripts
@@ -107,14 +121,14 @@ final class DataApi implements DataApiInterface
      */
     public function createRecord($layout, array $data, array $scripts = [], array $portalData = [])
     {
-        $jsonOptions = [
-            'fieldData' => json_encode(array_map('\strval', $data))
-        ];
+        // Prepare options
+        $jsonOptions = $this->encodeFieldData($data);
 
         if (!empty($portalData)) {
-            $jsonOptions['portalData'] = json_encode($portalData);
+            $jsonOptions['portalData'] = $this->encodePortalData($portalData);
         }
 
+        // Send curl request
         $response = $this->ClientRequest->request(
             'POST',
             "/v1/databases/$this->apiDatabase/layouts/$layout/records",
@@ -131,6 +145,34 @@ final class DataApi implements DataApiInterface
     }
 
     /**
+     * Duplicate an existing record
+     *
+     * @param $layout
+     * @param $recordId
+     * @param array $scripts
+     * @return mixed
+     * @throws Exception
+     */
+    public function duplicateRecord($layout, $recordId, array $scripts = [])
+    {
+        // Send curl request
+        $response = $this->ClientRequest->request(
+            'POST',
+            "/v1/databases/$this->apiDatabase/layouts/$layout/records/$recordId",
+            [
+                'headers' => $this->getDefaultHeaders(),
+                'json'    => array_merge(
+                    $this->prepareScriptOptions($scripts)
+                ),
+            ]
+        );
+
+        return $response->getBody()['response']['recordId'];
+    }
+
+    /**
+     * Edit an existing record by ID
+     *
      * @param       $layout
      * @param       $recordId
      * @param array $data
@@ -143,14 +185,18 @@ final class DataApi implements DataApiInterface
      */
     public function editRecord($layout, $recordId, array $data, $lastModificationId = null, array $portalData = [], array $scripts = [])
     {
-        $jsonOptions = [
-            'fieldData' => json_encode(array_map('\strval', $data)),
-        ];
+        // Prepare options
+        $jsonOptions = $this->encodeFieldData($data);
 
-        if (!is_null($lastModificationId)) {
+        if (!empty($lastModificationId)) {
             $jsonOptions['modId'] = $lastModificationId;
         }
 
+        if (!empty($portalData)) {
+            $jsonOptions['portalData'] = $this->encodePortalData($portalData);
+        }
+
+        // Send curl request
         $response = $this->ClientRequest->request(
             'PATCH',
             "/v1/databases/$this->apiDatabase/layouts/$layout/records/$recordId",
@@ -167,42 +213,59 @@ final class DataApi implements DataApiInterface
     }
 
     /**
-     * Get record detail
+     * Delete record by ID
      *
      * @param       $layout
      * @param       $recordId
-     * @param array $portalOptions
      * @param array $scripts
      *
+     * @throws Exception
+     */
+    public function deleteRecord($layout, $recordId, array $scripts = [])
+    {
+        // Send curl request
+        $this->ClientRequest->request(
+            'DELETE',
+            "/v1/databases/$this->apiDatabase/layouts/$layout/records/$recordId",
+            [
+                'headers' => $this->getDefaultHeaders(),
+                'json'    => $this->prepareScriptOptions($scripts),
+            ]
+        );
+    }
+
+    /**
+     * Get record detail by ID
+     *
+     * @param       $layout
+     * @param       $recordId
+     * @param array $portals
+     * @param array $scripts
+     *
+     * @param null $responseLayout
      * @return mixed
      * @throws Exception
      */
-    public function getRecord(
-        $layout,
-        $recordId,
-        array $portalOptions = [],
-        array $scripts = []
-    ) {
-        $queryParams = [];
-        if (!empty($portalOptions)) {
-            $queryParams['portal'] = $portalOptions['name'];
+    public function getRecord($layout, $recordId, array $portals = [], array $scripts = [], $responseLayout = null)
+    {
+        // Prepare options
+        $jsonOptions = [];
 
-            if (isset($portalOptions['limit'])) {
-                $queryParams['_limit.'.$queryParams['portal']] = $portalOptions['limit'];
-            }
-            if (isset($portalOptions['offset'])) {
-                $queryParams['_offset.'.$queryParams['portal']] = $portalOptions['offset'];
-            }
+        // optional parameters
+        if (!empty($responseLayout)) {
+            $jsonOptions['layout.response'] = $responseLayout;
         }
 
+        // Send curl request
         $response = $this->ClientRequest->request(
             'GET',
             "/v1/databases/$this->apiDatabase/layouts/$layout/records/$recordId",
             [
                 'headers'      => $this->getDefaultHeaders(),
                 'query_params' => array_merge(
-                    $queryParams,
-                    $this->prepareScriptOptions($scripts)
+                    $jsonOptions,
+                    $this->prepareScriptOptions($scripts),
+                    $this->preparePortalsOptions($portals)
                 ),
             ]
         );
@@ -219,32 +282,20 @@ final class DataApi implements DataApiInterface
      * @param null  $limit
      * @param array $portals
      * @param array $scripts
+     * @param null  $responseLayout
      *
      * @return mixed
      * @throws Exception
      */
-    public function getRecords(
-        $layout,
-        $sort = null,
-        $offset = null,
-        $limit = null,
-        array $portals = [],
-        array $scripts = []
-    ) {
+    public function getRecords($layout, $sort = null, $offset = null, $limit = null, array $portals = [], array $scripts = [], $responseLayout = null)
+    {
+        // Prepare options
         $jsonOptions = [];
 
-        if (!is_null($offset)) {
-            $jsonOptions['_offset'] = intval($offset);
-        }
+        // Search options
+        $this->prepareJsonOption($jsonOptions, $offset, $limit, $sort, $responseLayout, true);
 
-        if (!is_null($limit)) {
-            $jsonOptions['_limit'] = intval($limit);
-        }
-
-        if (!is_null($sort)) {
-            $jsonOptions['_sort'] = (is_array($sort) ? json_encode($sort) : $sort);
-        }
-
+        // Send curl request
         $response = $this->ClientRequest->request(
             'GET',
             "/v1/databases/$this->apiDatabase/layouts/$layout/records",
@@ -262,44 +313,6 @@ final class DataApi implements DataApiInterface
     }
 
     /**
-     *  Upload files into container
-     *
-     * @param $layout
-     * @param $recordId
-     * @param $containerFieldName
-     * @param $containerFieldRepetition
-     * @param $filepath
-     * @param null $filename
-     *
-     * @return true
-     *
-     * @throws Exception
-     */
-    public function uploadToContainer($layout, $recordId, $containerFieldName, $containerFieldRepetition, $filepath, $filename = null)
-    {
-        if (empty($filename)) {
-            $filename = pathinfo($filepath, PATHINFO_FILENAME).'.'.pathinfo($filepath, PATHINFO_EXTENSION);
-        }
-        
-        $this->ClientRequest->request(
-            'POST',
-            "/v1/databases/$this->apiDatabase/layouts/$layout/records/$recordId/containers/$containerFieldName/$containerFieldRepetition",
-            [
-                'headers' => array_merge(
-                    $this->getDefaultHeaders(),
-                    ['Content-Type' => 'multipart/form-data']
-                ),
-                'file'    => [
-                    'name' => $filename,
-                    'path' => $filepath
-                ]
-            ]
-        );
-
-        return true;
-    }
-
-    /**
      * Find records
      *
      * @param       $layout
@@ -314,54 +327,24 @@ final class DataApi implements DataApiInterface
      * @return mixed
      * @throws Exception
      */
-    public function findRecords(
-        $layout,
-        $query,
-        $sort = null,
-        $offset = null,
-        $limit = null,
-        array $portals = [],
-        array $scripts = [],
-        $responseLayout = null
-    ) {
+    public function findRecords($layout, $query, $sort = null, $offset = null, $limit = null, array $portals = [], array $scripts = [], $responseLayout = null)
+    {
+        // Prepare query
         if (!is_array($query)) {
             $preparedQuery = [$query];
         } else {
-            $preparedQuery = [];
-            foreach ($query as $queryItem) {
-                if (!isset($queryItem['fields'])) {
-                    break;
-                }
-
-                $item = [];
-                foreach ($queryItem['fields'] as $field) {
-                    $item[$field['fieldname']] = $field['fieldvalue'];
-                }
-
-                if (isset($queryItem['options']['omit']) && $queryItem['options']['omit'] == true) {
-                    $preparedQuery[] = array_merge($item, ['omit' => "true"]);
-                } else {
-                    $preparedQuery[] = $item;
-                }
-            }
+            $preparedQuery = $this->prepareQueryOptions($query);
         }
 
+        // Prepare options
         $jsonOptions = [
             'query' => json_encode($preparedQuery),
         ];
 
-        if (!is_null($offset)) {
-            $jsonOptions['offset'] = intval($offset);
-        }
+        // Search options
+        $this->prepareJsonOption($jsonOptions, $offset, $limit, $sort, $responseLayout);
 
-        if (!is_null($limit)) {
-            $jsonOptions['limit'] = intval($limit);
-        }
-
-        if (!is_null($sort)) {
-            $jsonOptions['sort'] = (is_array($sort) ? json_encode($sort) : $sort);
-        }
-
+        // Send curl request
         try {
             $response = $this->ClientRequest->request(
                 'POST',
@@ -386,6 +369,98 @@ final class DataApi implements DataApiInterface
         return $response->getBody()['response']['data'];
     }
 
+    // -- End records Part --
+
+    // -- Start scripts Part --
+
+    /**
+     * Execute script alone
+     *
+     * @param $layout
+     * @param $scriptName
+     * @param null $scriptParam
+     * @return mixed
+     * @throws Exception
+     */
+    public function executeScript($layout, $scriptName, $scriptParam = null)
+    {
+        // Prepare options
+        $jsonOptions = [];
+
+        // optional parameters
+        if (!empty($scriptParam)) {
+            $jsonOptions['script.param'] = $scriptParam;
+        }
+
+        // Send curl request
+        $response = $this->ClientRequest->request(
+            'GET',
+            "/v1/databases/$this->apiDatabase/layouts/$layout/script/$scriptName",
+            [
+                'headers'      => $this->getDefaultHeaders(),
+                'query_params' => array_merge(
+                    $jsonOptions
+                ),
+            ]
+        );
+
+        return $response->getBody()['response']['scriptResult'];
+    }
+
+    // -- End scripts Part --
+
+    // -- Start container Part --
+
+    /**
+     * Upload files into container field with or without specific repetition
+     *
+     * @param $layout
+     * @param $recordId
+     * @param $containerFieldName
+     * @param $containerFieldRepetition
+     * @param $filepath
+     * @param null $filename
+     *
+     * @return true
+     *
+     * @throws Exception
+     */
+    public function uploadToContainer($layout, $recordId, $containerFieldName, $containerFieldRepetition = null, $filepath, $filename = null)
+    {
+        // Prepare options
+        $containerFieldRepetitionFormat = "";
+
+        if (empty($filename)) {
+            $filename = pathinfo($filepath, PATHINFO_FILENAME).'.'.pathinfo($filepath, PATHINFO_EXTENSION);
+        }
+
+        if (!empty($containerFieldRepetition)) {
+            $containerFieldRepetitionFormat = '/'.intval($containerFieldRepetition);
+        }
+
+        // Send curl request
+        $this->ClientRequest->request(
+            'POST',
+            "/v1/databases/$this->apiDatabase/layouts/$layout/records/$recordId/containers/$containerFieldName".$containerFieldRepetitionFormat,
+            [
+                'headers' => array_merge(
+                    $this->getDefaultHeaders(),
+                    ['Content-Type' => 'multipart/form-data']
+                ),
+                'file'    => [
+                    'name' => $filename,
+                    'path' => $filepath
+                ]
+            ]
+        );
+
+        return true;
+    }
+
+    // -- End container Part --
+
+    // -- Start globals Part --
+
     /**
      * Define one or multiple global fields
      *
@@ -397,6 +472,7 @@ final class DataApi implements DataApiInterface
      */
     public function setGlobalFields($layout, array $globalFields)
     {
+        // Send curl request
         $response = $this->ClientRequest->request(
             'PATCH',
             "/v1/databases/$this->apiDatabase/globals",
@@ -408,49 +484,130 @@ final class DataApi implements DataApiInterface
             ]
         );
 
-        return $response->getBody();
+        return $response->getBody()['response'];
     }
 
+    // -- End globals Part --
+
+    // -- Start metadata Part --
+
     /**
-     * Delete record by id
-     *
-     * @param       $layout
-     * @param       $recordId
-     * @param array $scripts
-     *
+     * @return mixed
      * @throws Exception
      */
-    public function deleteRecord($layout, $recordId, $scripts = [])
+    public function getProductInfo()
     {
-        $this->ClientRequest->request(
-            'DELETE',
-            "/v1/databases/$this->apiDatabase/layouts/$layout/records/$recordId",
+        // Send curl request
+        $response = $this->ClientRequest->request(
+            'GET',
+            "/v1/productInfo",
             [
                 'headers' => $this->getDefaultHeaders(),
-                'json'    => $this->prepareScriptOptions($scripts),
+                'json'    => []
             ]
         );
+
+        return $response->getBody()['response'];
     }
 
     /**
-     *  Close the connection with FileMaker Server API
+     * @return mixed
      * @throws Exception
      */
-    public function logout()
+    public function getDatabaseNames()
     {
-        $this->ClientRequest->request(
-            'DELETE',
-            "/v1/databases/$this->apiDatabase/sessions/$this->apiToken",
-            []
+        // Send curl request
+        $response = $this->ClientRequest->request(
+            'GET',
+            "/v1/databases",
+            [
+                'headers' => $this->getHeaderAuth(),
+                'json'    => []
+            ]
         );
 
-        $this->resetObject();
-
-        return $this;
+        return $response->getBody()['response'];
     }
 
     /**
-     *  Get API token returned after a succesful login
+     * @return mixed
+     * @throws Exception
+     */
+    public function getLayoutNames()
+    {
+        // Send curl request
+        $response = $this->ClientRequest->request(
+            'GET',
+            "/v1/databases/$this->apiDatabase/layouts",
+            [
+                'headers' => $this->getDefaultHeaders(),
+                'json'    => []
+            ]
+        );
+
+        return $response->getBody()['response'];
+    }
+
+    /**
+     * @return mixed
+     * @throws Exception
+     */
+    public function getScriptNames()
+    {
+        // Send curl request
+        $response = $this->ClientRequest->request(
+            'GET',
+            "/v1/databases/$this->apiDatabase/scripts",
+            [
+                'headers' => $this->getDefaultHeaders(),
+                'json'    => []
+            ]
+        );
+
+        return $response->getBody()['response'];
+    }
+
+    /**
+     * @param $layout
+     * @param null $recordId
+     *
+     * @throws Exception
+     * @return mixed
+     */
+    public function getLayoutMetadata($layout, $recordId = null)
+    {
+        // Prepare options
+        $jsonOptions = [];
+
+        $metadataFormat = '/metadata';
+
+        if (!empty($recordId)) {
+            $jsonOptions['recordId'] = $recordId;
+            $metadataFormat = '';
+        }
+
+        // Send curl request
+        $response = $this->ClientRequest->request(
+            'GET',
+            "/v1/databases/$this->apiDatabase/layouts/$layout".$metadataFormat,
+            [
+                'headers' => $this->getDefaultHeaders(),
+                'json'    => array_merge(
+                    $jsonOptions
+                ),
+            ]
+        );
+
+        return $response->getBody()['response'];
+    }
+
+    // -- End metadata Part --
+
+
+    // -- Class accessors --
+
+    /**
+     *  Get API token returned after a successful login
      *
      * @return null|string
      */
@@ -460,7 +617,73 @@ final class DataApi implements DataApiInterface
     }
 
     /**
+     * @return null
+     */
+    public function getApiUsername()
+    {
+        return $this->apiUsername;
+    }
+
+    /**
+     * @param null $apiUsername
+     */
+    public function setApiUsername($apiUsername)
+    {
+        $this->apiUsername = $apiUsername;
+    }
+
+    /**
+     * @return null
+     */
+    public function getApiPassword()
+    {
+        return $this->apiPassword;
+    }
+
+    /**
+     * @param null $apiPassword
+     */
+    public function setApiPassword($apiPassword)
+    {
+        $this->apiPassword = $apiPassword;
+    }
+
+    /**
+     * @return null
+     */
+    public function getOAuthRequestId()
+    {
+        return $this->oAuthRequestId;
+    }
+
+    /**
+     * @param null $oAuthRequestId
+     */
+    public function setOAuthRequestId($oAuthRequestId)
+    {
+        $this->oAuthRequestId = $oAuthRequestId;
+    }
+
+    /**
+     * @return null
+     */
+    public function getOAuthIdentifier()
+    {
+        return $this->oAuthIdentifier;
+    }
+
+    /**
+     * @param null $oAuthIdentifier
+     */
+    public function setOAuthIdentifier($oAuthIdentifier)
+    {
+        $this->oAuthIdentifier = $oAuthIdentifier;
+    }
+
+    /**
      *  Set API token in request headers
+     *
+     * @return array
      */
     private function getDefaultHeaders()
     {
@@ -468,16 +691,82 @@ final class DataApi implements DataApiInterface
     }
 
     /**
-     * Reset object properties
+     * Get header authorization for basic Auth
+     *
+     * @return array
      */
-    private function resetObject()
+    private function getHeaderBasicAuth()
     {
-        foreach ($this as $key => $value) {
-            $this->$key = null;
-        }
+        return ['Authorization' => 'Basic '.base64_encode("$this->apiUsername:$this->apiPassword")];
     }
 
     /**
+     * Get header authorization for OAuth
+     *
+     * @return array
+     */
+    private function getHeaderOAuth()
+    {
+        return [
+            'X-FM-Data-Login-Type'       => 'oauth',
+            'X-FM-Data-OAuth-Request-Id' => $this->oAuthRequestId,
+            'X-FM-Data-OAuth-Identifier' => $this->oAuthIdentifier,
+        ];
+    }
+
+    /**
+     * Get Header switch to parameters
+     *
+     * @return array
+     */
+    private function getHeaderAuth()
+    {
+        $headers = [];
+        if (!empty($this->apiUsername)) {
+            $headers = $this->getHeaderBasicAuth();
+        }
+
+        if (!empty($this->oAuthRequestId)) {
+            $headers = $this->getHeaderOAuth();
+        }
+
+        return $headers;
+    }
+
+    // -- Options worker functions --
+
+    /**
+     * Prepare options fields for query
+     *
+     * @param array $query
+     * @return array
+     */
+    private function prepareQueryOptions(array $query)
+    {
+        $preparedQuery = [];
+        foreach ($query as $queryItem) {
+            if (!isset($queryItem['fields'])) {
+                break;
+            }
+
+            $item = [];
+            foreach ($queryItem['fields'] as $field) {
+                $item[$field['fieldname']] = $field['fieldvalue'];
+            }
+
+            if (isset($queryItem['options']['omit']) && $queryItem['options']['omit'] == true) {
+                $preparedQuery[] = array_merge($item, ['omit' => "true"]);
+            } else {
+                $preparedQuery[] = $item;
+            }
+        }
+
+        return $preparedQuery;
+    }
+
+    /**
+     * Prepare options for script
+     *
      * @param array $scripts
      *
      * @return array
@@ -500,6 +789,8 @@ final class DataApi implements DataApiInterface
     }
 
     /**
+     * Prepare options for portals
+     *
      * @param array $portals
      *
      * @return array
@@ -527,5 +818,60 @@ final class DataApi implements DataApiInterface
         $options['portal'] = json_encode($portalList);
 
         return $options;
+    }
+
+    /**
+     * Json encode array with array_map options, for fieldData param
+     *
+     * @param array $data
+     * @return array
+     */
+    private function encodeFieldData(array $data)
+    {
+        return [
+            'fieldData' => json_encode(array_map('\strval', $data)),
+        ];
+    }
+
+    /**
+     * Normal json encode array
+     *
+     * @param array $portal
+     * @return string
+     */
+    private function encodePortalData(array $portal)
+    {
+        return json_encode($portal);
+    }
+
+    /**
+     * Prepare recurrent options for requests
+     *
+     * @param array $jsonOptions
+     * @param null $offset
+     * @param null $limit
+     * @param null $sort
+     * @param null $responseLayout
+     * @param bool $withUnderscore
+     */
+    private function prepareJsonOption(array &$jsonOptions = [], $offset = null, $limit = null, $sort = null, $responseLayout = null, $withUnderscore = false)
+    {
+        $additionalCharacter = ($withUnderscore ? '_' : '');
+
+        if (!empty($offset)) {
+            $jsonOptions[$additionalCharacter.'offset'] = intval($offset);
+        }
+
+        if (!empty($limit)) {
+            $jsonOptions[$additionalCharacter.'limit'] = intval($limit);
+        }
+
+        if (!empty($sort)) {
+            $jsonOptions[$additionalCharacter.'sort'] = (is_array($sort) ? json_encode($sort) : $sort);
+        }
+
+        if (!empty($responseLayout)) {
+            $jsonOptions['layout.response'] = $responseLayout;
+        }
     }
 }

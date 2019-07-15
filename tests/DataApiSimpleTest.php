@@ -35,7 +35,9 @@ class DataApiSimpleTest
     public function loginTest($username, $password)
     {
         try {
-            $this->dataApi->login($username, $password);
+            $this->dataApi->setApiPassword($password);
+            $this->dataApi->setApiUsername($username);
+            $this->dataApi->login();
         } catch (\Exception $e) {
             return $e->getMessage();
         }
@@ -52,7 +54,9 @@ class DataApiSimpleTest
     public function loginOauthTest($oAuthRequestId, $oAuthIdentifier)
     {
         try {
-            $this->dataApi->loginOauth($oAuthRequestId, $oAuthIdentifier);
+            $this->dataApi->setOAuthIdentifier($oAuthRequestId);
+            $this->dataApi->setOAuthRequestId($oAuthIdentifier);
+            $this->dataApi->login();
         } catch (\Exception $e) {
             return $e->getMessage();
         }

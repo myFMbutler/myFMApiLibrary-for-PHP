@@ -44,7 +44,7 @@ final class CurlClient
         }
 
         $headers = [];
-        $completeUrl = $this->baseUrl . curl_escape($ch, $url);
+        $completeUrl = str_replace('%2F', '/', $this->baseUrl . curl_escape($ch, $url));
 
         if (!$this->sslVerify) {
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
@@ -58,7 +58,12 @@ final class CurlClient
 
         $contentLength = 0;
         if (isset($options['json']) && !empty($options['json']) && $method !== 'GET') {
-            $body = json_encode($options['json']);
+            $body = "{";
+            foreach ($options['json'] as $jsonOptionKey => $jsonOptionData) {
+                $body.= json_encode($jsonOptionKey) . ':'.( $this->isJson($jsonOptionData) ? $jsonOptionData : json_encode($jsonOptionData)).',';
+            }
+            $body = rtrim($body, ',');
+            $body.= "}";
 
             if ($body === false) {
                 throw new Exception("Failed to json encode parameters");
@@ -145,5 +150,14 @@ final class CurlClient
                 throw new Exception($message, $response->getHttpCode());
             }
         }
+    }
+
+    /**
+     * @param $string
+     * @return bool
+     */
+    private function isJson($string) {
+        json_decode($string);
+        return (json_last_error() == JSON_ERROR_NONE);
     }
 }
