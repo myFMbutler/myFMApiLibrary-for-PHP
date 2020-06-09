@@ -20,6 +20,11 @@ interface DataApiInterface
     public function logout();
 
     /**
+     * @return mixed
+     */
+    public function validateSession();
+
+    /**
      * @param       $layout
      * @param array $data
      * @param array $scripts

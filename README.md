@@ -4,22 +4,23 @@ Lesterius FileMaker 18 Data API wrapper - myFMApiLibrary for PHP
 # Presentation
 
 ## Team
-[Lesterius](https://www.lesterius.com "Lesterius") is a European FileMaker Business Alliance Platinum member that operates in Belgium, France, the Netherlands, Portugal and Spain. We are creative business consultants who co-create FileMaker Platform based solutions with our customers.\
+[Lesterius](https://www.lesterius.com "Lesterius") is a European Claris (FileMaker) Business Alliance Platinum member that operates in Belgium, France, the Netherlands, Portugal and Spain. We are creative business consultants who co-create FileMaker Platform based solutions with our customers.\
 Sharing knowledge takes part of our DNA, that's why we developed this library to make the FileMaker Data API easy-to-use with PHP.\
 Break the limits of your application!\
 ![Lesterius logo](http://i1.createsend1.com/ei/r/29/D33/DFF/183501/csfinal/Mailing_Lesterius-logo.png "Lesterius")
 
 ## Description
-This library is a PHP wrapper of the FileMaker Data API 18.<br/>
+This library is a PHP wrapper of the (Claris) FileMaker Data API 19.<br/>
 
 You can find the PHP wrapper of the FileMaker Data API 17 on the releases <= v.1.* .<br/>
+You can find the PHP wrapper of the FileMaker Data API 18 on the releases <= v.2.* .<br/>
 
 You will be able to use every functions like it's documented in your FileMaker server Data Api documentation (accessible via https://[your server domain]/fmi/data/apidoc).
-General FileMaker document on the Data API is available [here](https://fmhelp.filemaker.com/docs/18/en/dataapi/)
+General Claris document on the Data API is available [here](https://help.claris.com/en/data-api-guide/)
 
 ## Requirements
 
-- PHP 7.1 or higher
+- PHP >= 5.5
 - PHP cURL extension
 - PHP mb_string extension
 
@@ -39,10 +40,10 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 # Usage
 
-## Prepare your FileMaker solution
+## Prepare your Claris (Filmaker) solution
 
-1. Enable the FileMaker Data API option on your FileMaker server admin console.
-2. Create a specific user in your FileMaker database with the 'fmrest' privilege
+1. Enable the (Claris) FileMaker Data API option on your FileMaker server admin console.
+2. Create a specific user in your (Claris) FileMaker database with the 'fmrest' privilege
 3. Define records & layouts access for this user
 
 ## Use the library
@@ -64,6 +65,13 @@ $dataApi = new \Lesterius\FileMakerApi\DataApi('https://test.fmconnection.com/fm
 ```php
 
 $dataApi->logout();
+```
+
+### Validate Session
+
+```php
+
+$dataApi->validateSession();
 ```
 
 ### Create record

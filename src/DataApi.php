@@ -15,6 +15,7 @@ final class DataApi implements DataApiInterface
     const SCRIPT_PREREQUEST  = 'prerequest';
     const SCRIPT_PRESORT     = 'presort';
     const SCRIPT_POSTREQUEST = 'postrequest';
+    const LASTVERSION        = 'vLatest';
 
     protected $ClientRequest  = null;
     protected $apiDatabase    = null;
@@ -25,12 +26,14 @@ final class DataApi implements DataApiInterface
     private   $apiPassword          = null;
     private   $oAuthRequestId       = null;
     private   $oAuthIdentifier      = null;
+    private   $version              = null;
 
     /**
      * DataApi constructor
      *
      * @param      $apiUrl
      * @param      $apiDatabase
+     * @param null $version
      * @param      $apiUsername
      * @param      $apiPassword
      *
@@ -39,7 +42,7 @@ final class DataApi implements DataApiInterface
      * @param null $oAuthIdentifier
      * @throws Exception
      */
-    public function __construct($apiUrl, $apiDatabase, $apiUsername = null, $apiPassword = null, $sslVerify = true, $oAuthRequestId = null, $oAuthIdentifier = null)
+    public function __construct($apiUrl, $apiDatabase, $version = null, $apiUsername = null, $apiPassword = null, $sslVerify = true, $oAuthRequestId = null, $oAuthIdentifier = null)
     {
         $this->apiDatabase      = $apiDatabase;
         $this->ClientRequest    = new CurlClient($apiUrl, $sslVerify);
@@ -50,6 +53,12 @@ final class DataApi implements DataApiInterface
 
         if ((empty($apiUsername) && empty($apiPassword)) || (empty($oAuthRequestId) && empty($oAuthIdentifier))) {
             new \Exception("Data Api needs valid credentials [username;password] or [authRequestId;authIdentifier]");
+        }
+
+        if (is_null($version)) {
+            $this->version = self::LASTVERSION;
+        } else {
+            $this->version = $version;
         }
 
         // Basic default Authentication
@@ -73,7 +82,7 @@ final class DataApi implements DataApiInterface
         // Send curl request
         $response = $this->ClientRequest->request(
             'POST',
-            "/v1/databases/$this->apiDatabase/sessions",
+            "/$this->version/databases/$this->apiDatabase/sessions",
             [
                 'headers' => $headers,
                 'json'    => []
@@ -95,13 +104,33 @@ final class DataApi implements DataApiInterface
         // Send curl request
         $this->ClientRequest->request(
             'DELETE',
-            "/v1/databases/$this->apiDatabase/sessions/$this->apiToken",
+            "/$this->version/databases/$this->apiDatabase/sessions/$this->apiToken",
             []
         );
 
         $this->apiToken = null;
 
         return $this;
+    }
+
+    /**
+     * Validate Session
+     *
+     * @return bool
+     * @throws Exception
+     */
+    public function validateSession()
+    {
+        // Send curl request
+        $response = $this->ClientRequest->request(
+            'GET',
+            "/$this->version/validateSession",
+            [
+                'headers' => $this->getDefaultHeaders()
+            ]
+        );
+
+        return (isset($response->getBody()['messages'][0]['code']) && $response->getBody()['messages'][0]['code'] == "0");
     }
 
     // -- End auth Part --
@@ -131,7 +160,7 @@ final class DataApi implements DataApiInterface
         // Send curl request
         $response = $this->ClientRequest->request(
             'POST',
-            "/v1/databases/$this->apiDatabase/layouts/$layout/records",
+            "/$this->version/databases/$this->apiDatabase/layouts/$layout/records",
             [
                 'headers' => $this->getDefaultHeaders(),
                 'json'    => array_merge(
@@ -158,7 +187,7 @@ final class DataApi implements DataApiInterface
         // Send curl request
         $response = $this->ClientRequest->request(
             'POST',
-            "/v1/databases/$this->apiDatabase/layouts/$layout/records/$recordId",
+            "/$this->version/databases/$this->apiDatabase/layouts/$layout/records/$recordId",
             [
                 'headers' => $this->getDefaultHeaders(),
                 'json'    => array_merge(
@@ -199,7 +228,7 @@ final class DataApi implements DataApiInterface
         // Send curl request
         $response = $this->ClientRequest->request(
             'PATCH',
-            "/v1/databases/$this->apiDatabase/layouts/$layout/records/$recordId",
+            "/$this->version/databases/$this->apiDatabase/layouts/$layout/records/$recordId",
             [
                 'headers' => $this->getDefaultHeaders(),
                 'json'    => array_merge(
@@ -226,7 +255,7 @@ final class DataApi implements DataApiInterface
         // Send curl request
         $this->ClientRequest->request(
             'DELETE',
-            "/v1/databases/$this->apiDatabase/layouts/$layout/records/$recordId",
+            "/$this->version/databases/$this->apiDatabase/layouts/$layout/records/$recordId",
             [
                 'headers' => $this->getDefaultHeaders(),
                 'json'    => $this->prepareScriptOptions($scripts),
@@ -259,7 +288,7 @@ final class DataApi implements DataApiInterface
         // Send curl request
         $response = $this->ClientRequest->request(
             'GET',
-            "/v1/databases/$this->apiDatabase/layouts/$layout/records/$recordId",
+            "/$this->version/databases/$this->apiDatabase/layouts/$layout/records/$recordId",
             [
                 'headers'      => $this->getDefaultHeaders(),
                 'query_params' => array_merge(
@@ -298,7 +327,7 @@ final class DataApi implements DataApiInterface
         // Send curl request
         $response = $this->ClientRequest->request(
             'GET',
-            "/v1/databases/$this->apiDatabase/layouts/$layout/records",
+            "/$this->version/databases/$this->apiDatabase/layouts/$layout/records",
             [
                 'headers'      => $this->getDefaultHeaders(),
                 'query_params' => array_merge(
@@ -348,7 +377,7 @@ final class DataApi implements DataApiInterface
         try {
             $response = $this->ClientRequest->request(
                 'POST',
-                "/v1/databases/$this->apiDatabase/layouts/$layout/_find",
+                "/$this->version/databases/$this->apiDatabase/layouts/$layout/_find",
                 [
                     'headers' => $this->getDefaultHeaders(),
                     'json'    => array_merge(
@@ -395,7 +424,7 @@ final class DataApi implements DataApiInterface
         // Send curl request
         $response = $this->ClientRequest->request(
             'GET',
-            "/v1/databases/$this->apiDatabase/layouts/$layout/script/$scriptName",
+            "/$this->version/databases/$this->apiDatabase/layouts/$layout/script/$scriptName",
             [
                 'headers'      => $this->getDefaultHeaders(),
                 'query_params' => array_merge(
@@ -404,7 +433,8 @@ final class DataApi implements DataApiInterface
             ]
         );
 
-        return $response->getBody()['response']['scriptResult'];
+        $result = (isset($response->getBody()['response']['scriptResult'])?$response->getBody()['response']['scriptResult']:$response->getBody()['response']['scriptError']);
+        return $result;
     }
 
     // -- End scripts Part --
@@ -441,7 +471,7 @@ final class DataApi implements DataApiInterface
         // Send curl request
         $this->ClientRequest->request(
             'POST',
-            "/v1/databases/$this->apiDatabase/layouts/$layout/records/$recordId/containers/$containerFieldName".$containerFieldRepetitionFormat,
+            "/$this->version/databases/$this->apiDatabase/layouts/$layout/records/$recordId/containers/$containerFieldName".$containerFieldRepetitionFormat,
             [
                 'headers' => array_merge(
                     $this->getDefaultHeaders(),
@@ -475,7 +505,7 @@ final class DataApi implements DataApiInterface
         // Send curl request
         $response = $this->ClientRequest->request(
             'PATCH',
-            "/v1/databases/$this->apiDatabase/globals",
+            "/$this->version/databases/$this->apiDatabase/globals",
             [
                 'headers' => $this->getDefaultHeaders(),
                 'json'    => [
@@ -500,7 +530,7 @@ final class DataApi implements DataApiInterface
         // Send curl request
         $response = $this->ClientRequest->request(
             'GET',
-            "/v1/productInfo",
+            "/$this->version/productInfo",
             [
                 'headers' => $this->getDefaultHeaders(),
                 'json'    => []
@@ -519,7 +549,7 @@ final class DataApi implements DataApiInterface
         // Send curl request
         $response = $this->ClientRequest->request(
             'GET',
-            "/v1/databases",
+            "/$this->version/databases",
             [
                 'headers' => $this->getHeaderAuth(),
                 'json'    => []
@@ -538,7 +568,7 @@ final class DataApi implements DataApiInterface
         // Send curl request
         $response = $this->ClientRequest->request(
             'GET',
-            "/v1/databases/$this->apiDatabase/layouts",
+            "/$this->version/databases/$this->apiDatabase/layouts",
             [
                 'headers' => $this->getDefaultHeaders(),
                 'json'    => []
@@ -557,7 +587,7 @@ final class DataApi implements DataApiInterface
         // Send curl request
         $response = $this->ClientRequest->request(
             'GET',
-            "/v1/databases/$this->apiDatabase/scripts",
+            "/$this->version/databases/$this->apiDatabase/scripts",
             [
                 'headers' => $this->getDefaultHeaders(),
                 'json'    => []
@@ -589,7 +619,7 @@ final class DataApi implements DataApiInterface
         // Send curl request
         $response = $this->ClientRequest->request(
             'GET',
-            "/v1/databases/$this->apiDatabase/layouts/$layout".$metadataFormat,
+            "/$this->version/databases/$this->apiDatabase/layouts/$layout".$metadataFormat,
             [
                 'headers' => $this->getDefaultHeaders(),
                 'json'    => array_merge(
@@ -614,6 +644,22 @@ final class DataApi implements DataApiInterface
     public function getApiToken()
     {
         return $this->apiToken;
+    }
+
+    /**
+     * @return null
+     */
+    public function getVersion()
+    {
+        return $this->version;
+    }
+
+    /**
+     * @param null $version
+     */
+    public function setVersion($version)
+    {
+        $this->version = $version;
     }
 
     /**
