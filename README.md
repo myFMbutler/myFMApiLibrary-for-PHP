@@ -1,4 +1,4 @@
-Lesterius FileMaker 18 Data API wrapper - myFMApiLibrary for PHP
+Lesterius (Claris) FileMaker 19 Data API wrapper - myFMApiLibrary for PHP
 =======================
 
 # Presentation
