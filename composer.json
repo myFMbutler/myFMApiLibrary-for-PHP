@@ -4,7 +4,7 @@
     "description": "(Claris) FileMaker 19 API PHP wrapper",
     "Keywords": ["Lesterius", "FileMaker", "Claris", "API", "REST", "Database", "Wrapper"],
     "license": "gpl-3.0",
-    "version": "3.0.0",
+    "version": "3.0.2",
     "minimum-stability": "stable",
     "authors": [
       {

@@ -52,7 +52,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 Login with credentials:
 ```php
-$dataApi = new \Lesterius\FileMakerApi\DataApi('https://test.fmconnection.com/fmi/data', 'MyDatabase', 'filemaker api user', 'filemaker api password');
+$dataApi = new \Lesterius\FileMakerApi\DataApi('https://test.fmconnection.com/fmi/data', 'MyDatabase', null, 'filemaker api user', 'filemaker api password');
 ```
 
 Login with oauth:
