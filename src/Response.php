@@ -82,6 +82,10 @@ final class Response
             return $this->headers[$header];
         }
 
+        if (isset($this->headers[strtolower($header)])) {
+            return $this->headers[strtolower($header)];
+        }
+
         throw new Exception("Header not found");
     }
 
